@@ -1,5 +1,5 @@
 
-const jobOrder = ['harvester', 'builder', 'maintenance', 'upgrader']
+const jobOrder = ['harvester', 'storager', 'builder', 'maintenance', 'upgrader']
 const utilityCreepBody = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE] //COST: 1500
 const cleanerCreepBody = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE] //COST: 700
 const creepMemory = {
@@ -12,11 +12,11 @@ const cleanerCreepMemory = {
                         isFull: false,
                         currentJob: undefined
                     }
-const numHarvesters = 4
-const numBuilders = 2
-const numMaintainers = 2
-const numUpgraders = 2
-const numCleaners = 1
+const numHarvesters = 2;
+const numStoragers = 1;
+const numBuilders = 2;
+const numMaintainers = 2;
+const numUpgraders = 2;
 
 function emergencyCreepSpawn() {
     let EmergencyCreepMemory = {
@@ -31,6 +31,11 @@ function emergencyCreepSpawn() {
 function getEnergySources(currRoom) {
     let energyResources = currRoom.find(FIND_SOURCES, { filter: sources => sources.energy > 0 || sources.ticksToRegeneration < 20}).map(sources => sources.id);
     return energyResources;
+}
+
+function getLinks(currRoom) {
+    let links = currRoom.find(FIND_MY_STRUCTURES, { filter: links => links.structureType === STRUCTURE_LINK });
+    return links;
 }
 
 function getOpenExtensions(currRoom) {
@@ -54,7 +59,7 @@ function getFullContainers(currRoom) {
 }
 
 function getOpenStorages(currRoom) {
-    let storages = currRoom.find(FIND_MY_STRUCTURES, { filter: storages => storages.structureType === STRUCTURE_STORAGE && storages.store.getFreeCapacity(RESOURCE_ENERGY) > 0 });
+    let storages = currRoom.find(FIND_MY_STRUCTURES, { filter: storages => storages.structureType === STRUCTURE_STORAGE && storages.store.getFreeCapacity() > 0 });
     return storages;
 }
 
@@ -102,11 +107,12 @@ function getDroppedItems(currRoom) {
 }
 
 function getJobsNeeded(currRoom) {
-    let jobArr = [0, 0, 0, 0]; // [Harvesters, Builders, Maintenance, Upgraders]
+    let jobArr = [0, 0, 0, 0]; // [Harvesters, Storager, Builders, Maintenance, Upgraders]
     jobArr[0] = numHarvesters;
-    jobArr[1] = getConstructionProjects(currRoom).length > 0 ? numBuilders : 0;
-    jobArr[2] = getDamagedRoadsWalls(currRoom).length > 0 ? numMaintainers : 0;
-    jobArr[3] = numUpgraders;
+    jobArr[1] = numStoragers;
+    jobArr[2] = getConstructionProjects(currRoom).length > 0 ? numBuilders : 0;
+    jobArr[3] = getDamagedRoadsWalls(currRoom).length > 0 ? numMaintainers : 0;
+    jobArr[4] = numUpgraders;
     return jobArr;
 }
 
@@ -129,7 +135,7 @@ function delegateJobs() {
     let cleanerCreeps = getCleanerCreeps();
     let currRoom = utilityCreeps[0].room;
     let jobsNeeded = getJobsNeeded(currRoom);
-    let jobList = jobOrder; // [harvest, builder, maintain, upgrader]
+    let jobList = jobOrder; // [harvest, storager, builder, maintainer, upgrader]
     let sum = 0;
     let currCreep = 0;
     for (let i = 0; i < jobsNeeded.length; i++) {
@@ -169,13 +175,16 @@ function harvestEnergy(currCreep) {
     let extensions = getOpenExtensions(currRoom);
     let containers = getOpenContainers(currRoom);
     let storages = getOpenStorages(currRoom);
+    let links = getLinks(currRoom);
     let energySources = getEnergySources(currRoom);
     let currStorage;
     if (energySources.length === 0) {
         return 0;
     }
     currCreep.memory.currentEnergySource = energySources[currCreep.memory.prefES % energySources.length];
-    if (extensions.length !== 0) {
+    if (links.length !== 0 && currCreep.pos.findClosestByPath(links).store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
+        currStorage = currCreep.pos.findClosestByPath(links);
+    } else if (extensions.length !== 0) {
         currStorage = currCreep.pos.findClosestByPath(extensions);
     } else if (Game.spawns['Spawn1'].store.getFreeCapacity(RESOURCE_ENERGY) !== 0) {
         currStorage = Game.spawns['Spawn1'];
@@ -366,6 +375,56 @@ function cleanup(currCreep) {
     }
 }
 
+function storager(currCreep) {
+    let currRoom = currCreep.room;
+    let links = getLinks(currRoom);
+    let extensions = getOpenExtensions(currRoom);
+    let containers = getFullContainers(currRoom);
+    let storages = getOpenStorages(currRoom);
+    let currStorage;
+    let closestStorage;
+    let closestLink = currCreep.pos.findClosestByPath(links);
+
+    if (links.length !== 0) {
+        if (closestLink.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+            currStorage = currCreep.pos.findClosestByPath(storages);
+        } else {
+            if (extensions.length !== 0) {
+                currStorage = currCreep.pos.findClosestByPath(extensions);
+                closestStorage = currCreep.pos.findClosestByPath(storages);
+            } else {
+                currStorage = currCreep.pos.findClosestByPath(storages);
+            }
+        }
+    }
+    if (currCreep.memory.isFull === false) {
+        if (closestLink.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+            if (currCreep.withdraw(closestLink,RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                currCreep.moveTo(closestLink);
+            }
+        } else {
+            if (currCreep.withdraw(closestStorage,RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                currCreep.moveTo(closestStorage);
+            }
+        }
+    } else {
+        if (currCreep.transfer(currStorage,RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+            currCreep.moveTo(currStorage);
+        }
+    }
+    if (currCreep.store.getFreeCapacity() === 0) {
+        currCreep.memory.isFull = true;
+    }
+    if (currCreep.store.getUsedCapacity() === 0) {
+        currCreep.memory.isFull = false;
+    }
+}
+
+function linkTransfers(currRoom) {
+    let links = getLinks(currRoom);
+    links[1].transferEnergy(links[0]);
+}
+
 module.exports = {
 run: function() {
     delegateJobs();
@@ -373,6 +432,8 @@ run: function() {
     let cleanerCreeps = getCleanerCreeps();
     let allCreeps = utilityCreeps.concat(cleanerCreeps);
     let numCreeps = Object.keys(Game.creeps).length;
+    let currRoom = allCreeps[0].room;
+    linkTransfers(currRoom);
     if (numCreeps === 0) {
         emergencyCreepSpawn();
     }
@@ -392,6 +453,9 @@ run: function() {
                 break;
             case 'cleaner':
                 cleanup(allCreeps[i]);
+                break;
+            case 'storager':
+                storager(allCreeps[i]);
                 break;
         }
         

@@ -18,7 +18,7 @@ const numHarvesters = 2;
 const numStoragers = 1;
 const numBuilders = 2;
 const numMaintainers = 2;
-const numUpgraders = 2;
+const numUpgraders = 3;
 
 function emergencyCreepSpawn() {
     let EmergencyCreepMemory = {

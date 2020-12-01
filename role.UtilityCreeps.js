@@ -18,7 +18,33 @@ const numHarvesters = 2;
 const numStoragers = 1;
 const numBuilders = 2;
 const numMaintainers = 2;
-const numUpgraders = 3;
+const numUpgraders = 2;
+
+function makeUtilityCreepBody(currRoom) { // 0.26/100 for Work 0.52/100 for Carry 0.8/100 for Move
+    let bodyParts = [WORK,CARRY,MOVE];
+    let totalExtensions = currRoom.find(FIND_MY_STRUCTURES, { filter: extensions => extensions.structureType === STRUCTURE_EXTENSION }).length * EXTENSION_ENERGY_CAPACITY[currRoom.controller.level];
+    let numParts = [Math.ceil(totalExtensions * 0.26/100), Math.ceil(totalExtensions * 0.52/100), Math.ceil(totalExtensions * 0.8/100)];
+    let body = [];
+    for (let i = 0; i < bodyParts.length; i++) {
+        for (let j = 0; j < numParts[i]; j++) {
+            body.push(bodyParts[i]);
+        }
+    }
+    return body;
+}
+
+function makeCleanerCreepBody(currRoom) {
+    let bodyParts = [CARRY,MOVE];
+    let totalExtensions = currRoom.find(FIND_MY_STRUCTURES, { filter: extensions => extensions.structureType === STRUCTURE_EXTENSION }).length * EXTENSION_ENERGY_CAPACITY[currRoom.controller.level];
+    let numParts = [Math.ceil(totalExtensions * 0.45/100), Math.ceil(totalExtensions * 0.45/100)];
+    let body = [];
+    for (let i = 0; i < bodyParts.length; i++) {
+        for (let j = 0; j < numParts[i]; j++) {
+            body.push(bodyParts[i]);
+        }
+    }
+    return body;
+}
 
 function emergencyCreepSpawn() {
     let EmergencyCreepMemory = {
@@ -424,7 +450,9 @@ function storager(currCreep) {
 
 function linkTransfers(currRoom) {
     let links = getLinks(currRoom);
-    links[1].transferEnergy(links[0]);
+    if (links[1].cooldown === 0) {
+        links[1].transferEnergy(links[0]);
+    }
 }
 
 module.exports = {

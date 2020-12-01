@@ -1,7 +1,9 @@
 
 const jobOrder = ['harvester', 'storager', 'builder', 'maintenance', 'upgrader']
-const utilityCreepBody = [WORK,WORK,WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE] //COST: 1500
-const cleanerCreepBody = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE] //COST: 700
+const utilityCreepBody = [WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE] //COST: 1400
+// 4 Work, 8 Carry, 12 Move
+const cleanerCreepBody = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE] //COST: 700
+// 7 Carry, 7 Move
 const creepMemory = {
                         cType: 'utility',
                         isFull: false,

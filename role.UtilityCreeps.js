@@ -1,19 +1,14 @@
-
-const jobOrder = ['harvester', 'storager', 'builder', 'maintenance', 'upgrader']
-const utilityCreepBody = [WORK,WORK,WORK,WORK,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE] //COST: 1400
-// 4 Work, 8 Carry, 12 Move
-const cleanerCreepBody = [CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,CARRY,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE,MOVE] //COST: 700
-// 7 Carry, 7 Move
+const jobOrder = ['harvester', 'storager', 'builder', 'maintenance', 'upgrader'];
 const creepMemory = {
                         cType: 'utility',
                         isFull: false,
                         currentJob: undefined
-                    }
+                    };
 const cleanerCreepMemory = {
                         cType: 'cleaner',
                         isFull: false,
                         currentJob: undefined
-                    }
+                    };
 const numHarvesters = 2;
 const numStoragers = 1;
 const numBuilders = 2;
@@ -46,14 +41,15 @@ function makeCleanerCreepBody(currRoom) {
     return body;
 }
 
-function emergencyCreepSpawn() {
+function emergencyCreepSpawn(currRoom) {
     let EmergencyCreepMemory = {
                         cType: 'utility',
                         isFull: false
-                    }
-    let status = Game.spawns['Spawn1'].spawnCreep([WORK,CARRY,MOVE],'Emergency',{memory:EmergencyCreepMemory})
-    let emergencyMsg = "Game ran out of creeps, spawned emergency creep with status ".concat(status)
-    Game.notify(emergencyMsg)
+                        };
+    let currSpawn = currRoom.find(FIND_MY_SPAWNS);
+    let status = currSpawn.spawnCreep([WORK,CARRY,MOVE],'Emergency',{memory:EmergencyCreepMemory});
+    let emergencyMsg = "Game ran out of creeps, spawned emergency creep with status ".concat(status);
+    Game.notify(emergencyMsg);
 }
 
 function getEnergySources(currRoom) {
@@ -101,13 +97,13 @@ function getTowers(currRoom) {
     return towers;
 }
 
-function getUtilityCreeps() {
-    let utilityCreeps = Game.spawns['Spawn1'].room.find(FIND_MY_CREEPS, { filter: currCreep => currCreep.memory.cType === 'utility'});
+function getUtilityCreeps(currRoom) {
+    let utilityCreeps = currRoom.find(FIND_MY_CREEPS, { filter: currCreep => currCreep.memory.cType === 'utility'});
     return utilityCreeps;
 }
 
-function getCleanerCreeps() {
-    let cleanerCreeps = Game.spawns['Spawn1'].room.find(FIND_MY_CREEPS, { filter: currCreep => currCreep.memory.cType === 'cleaner'});
+function getCleanerCreeps(currRoom) {
+    let cleanerCreeps = currRoom.find(FIND_MY_CREEPS, { filter: currCreep => currCreep.memory.cType === 'cleaner'});
     return cleanerCreeps;
 }
 
@@ -144,24 +140,25 @@ function getJobsNeeded(currRoom) {
     return jobArr;
 }
 
-function spawnUtilityCreeps() {
+function spawnUtilityCreeps(currRoom) {
     let cName = 'utility'.concat(((Game.time % 1000).toString()).padStart(3,0));
-    let cBody = utilityCreepBody;
+    let cBody = makeUtilityCreepBody(currRoom);
     let cMemory = creepMemory;
-    Game.spawns['Spawn1'].spawnCreep(cBody,cName,{memory:cMemory});
+    let currSpawn = currRoom.find(FIND_MY_SPAWNS)[0];
+    currSpawn.spawnCreep(cBody,cName,{memory:cMemory});
 }
 
-function spawnCleanupCreeps() {
+function spawnCleanupCreeps(currRoom) {
     let cName = 'cleanup'.concat(((Game.time % 1000).toString()).padStart(3,0));
-    let cBody = cleanerCreepBody;
+    let cBody = makeCleanerCreepBody(currRoom);
     let cMemory = cleanerCreepMemory;
-    Game.spawns['Spawn1'].spawnCreep(cBody,cName,{memory:cMemory});
+    let currSpawn = currRoom.find(FIND_MY_SPAWNS)[0];
+    currSpawn.spawnCreep(cBody,cName,{memory:cMemory});
 }
 
-function delegateJobs() {
-    let utilityCreeps = getUtilityCreeps();
-    let cleanerCreeps = getCleanerCreeps();
-    let currRoom = utilityCreeps[0].room;
+function delegateJobs(currRoom) {
+    let utilityCreeps = getUtilityCreeps(currRoom);
+    let cleanerCreeps = getCleanerCreeps(currRoom);
     let jobsNeeded = getJobsNeeded(currRoom);
     let jobList = jobOrder; // [harvest, storager, builder, maintainer, upgrader]
     let sum = 0;
@@ -172,7 +169,7 @@ function delegateJobs() {
     for (let i = 0; i < jobList.length; i++) {
         for (let j = 0; j < jobsNeeded[i]; j++) {
             if (utilityCreeps[currCreep] === undefined) {
-                spawnUtilityCreeps();
+                spawnUtilityCreeps(currRoom);
             } else if (utilityCreeps[currCreep].memory.currentJob !== jobList[i]) {
                 utilityCreeps[currCreep].memory.currentJob = jobList[i];
                 console.log(utilityCreeps[currCreep] + " assigned " + jobList[i]);
@@ -191,7 +188,7 @@ function delegateJobs() {
         }
     }
     if (cleanerCreeps[0] === undefined) {
-        spawnCleanupCreeps();
+        spawnCleanupCreeps(currRoom);
     } else if (cleanerCreeps[0].memory.currentJob === undefined) {
         console.log('Cleaner given job');
         cleanerCreeps[0].memory.currentJob = 'cleaner';
@@ -212,6 +209,8 @@ function harvestEnergy(currCreep) {
     currCreep.memory.currentEnergySource = energySources[currCreep.memory.prefES % energySources.length];
     if (links.length !== 0 && currCreep.pos.findClosestByPath(links).store.getFreeCapacity(RESOURCE_ENERGY) > 0) {
         currStorage = currCreep.pos.findClosestByPath(links);
+    } else if (containers.length !== 0) {
+        currStorage = currCreep.pos.findClosestByPath(containers);
     } else if (extensions.length !== 0) {
         currStorage = currCreep.pos.findClosestByPath(extensions);
     } else if (Game.spawns['Spawn1'].store.getFreeCapacity(RESOURCE_ENERGY) !== 0) {
@@ -391,7 +390,7 @@ function cleanup(currCreep) {
             }
         }
     } else {
-        if (currCreep.transfer(currStorage, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+        if (currCreep.transfer(currStorage) === ERR_NOT_IN_RANGE) {
             currCreep.moveTo(currStorage);
         }
     }
@@ -412,6 +411,7 @@ function storager(currCreep) {
     let currStorage;
     let closestStorage;
     let closestLink = currCreep.pos.findClosestByPath(links);
+    let closestContainer = currCreep.pos.findClosestByPath(containers);
 
     if (links.length !== 0) {
         if (closestLink.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
@@ -424,11 +424,29 @@ function storager(currCreep) {
                 currStorage = currCreep.pos.findClosestByPath(storages);
             }
         }
+    } else if (containers.length !== 0) {
+        if (closestContainer.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+            currStorage = currCreep.pos.findClosestByPath(storages);
+        } else {
+            if (extensions.length !== 0) {
+                currStorage = currCreep.pos.findClosestByPath(extensions);
+                closestStorage = currCreep.pos.findClosestByPath(storages);
+            } else {
+                currStorage = currCreep.pos.findClosestByPath(storages);
+            }
+        }
+    }
+    if (currStorage === undefined) {
+        currStorage = currRoom.find(FIND_MY_SPAWNS);
     }
     if (currCreep.memory.isFull === false) {
-        if (closestLink.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+        if (closestLink !== null && closestLink.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
             if (currCreep.withdraw(closestLink,RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                 currCreep.moveTo(closestLink);
+            }
+        } else if (closestContainer !== null && closestContainer.store.getUsedCapacity(RESOURCE_ENERGY) > 0) {
+            if (currCreep.withdraw(closestContainer,RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+                currCreep.moveTo(closestContainer);
             }
         } else {
             if (currCreep.withdraw(closestStorage,RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
@@ -450,22 +468,21 @@ function storager(currCreep) {
 
 function linkTransfers(currRoom) {
     let links = getLinks(currRoom);
-    if (links[1].cooldown === 0) {
+    if (links.length !== 0 && links[1].cooldown === 0) {
         links[1].transferEnergy(links[0]);
     }
 }
 
 module.exports = {
-run: function() {
-    delegateJobs();
-    let utilityCreeps = getUtilityCreeps();
-    let cleanerCreeps = getCleanerCreeps();
+run: function(currRoom) {
+    delegateJobs(currRoom);
+    let utilityCreeps = getUtilityCreeps(currRoom);
+    let cleanerCreeps = getCleanerCreeps(currRoom);
     let allCreeps = utilityCreeps.concat(cleanerCreeps);
     let numCreeps = Object.keys(Game.creeps).length;
-    let currRoom = allCreeps[0].room;
     linkTransfers(currRoom);
     if (numCreeps === 0) {
-        emergencyCreepSpawn();
+        emergencyCreepSpawn(currRoom);
     }
     for (let i = 0; i < allCreeps.length; i++) {
         switch(allCreeps[i].memory.currentJob) {

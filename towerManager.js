@@ -7,8 +7,8 @@
  * mod.thing == 'a thing'; // true
  */
 
-function getTowers() {
-    let towers = Game.spawns['Spawn1'].room.find(FIND_MY_STRUCTURES, { filter: towers => towers.structureType === STRUCTURE_TOWER });
+function getTowers(currRoom) {
+    let towers = currRoom.find(FIND_MY_STRUCTURES, { filter: towers => towers.structureType === STRUCTURE_TOWER });
     return towers;
 }
 
@@ -23,8 +23,8 @@ function getHurtCreeps(currTower) {
 }
 
 module.exports = {
-    run: function towerManager() {
-        let towers = getTowers();
+    run: function towerManager(currRoom) {
+        let towers = getTowers(currRoom);
         for (let i = 0; i < towers.length; i++) {
             let currTower = towers[i];
             let currHostile = getHostiles(currTower)[0];

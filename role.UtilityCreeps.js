@@ -390,7 +390,7 @@ function cleanup(currCreep) {
             }
         }
     } else {
-        if (currCreep.transfer(currStorage) === ERR_NOT_IN_RANGE) {
+        if (currCreep.transfer(currStorage,Object.keys(currCreep.store)[0]) === ERR_NOT_IN_RANGE) {
             currCreep.moveTo(currStorage);
         }
     }

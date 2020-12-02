@@ -12,13 +12,13 @@ const cleanerCreepMemory = {
 const numHarvesters = 2;
 const numStoragers = 1;
 const numBuilders = 2;
-const numMaintainers = 2;
+const numMaintainers = 1;
 const numUpgraders = 2;
 
-function makeUtilityCreepBody(currRoom) { // 0.26/100 for Work 0.52/100 for Carry 0.8/100 for Move
+function makeUtilityCreepBody(currRoom) { // 0.3/100 for Work 0.52/100 for Carry 0.8/100 for Move
     let bodyParts = [WORK,CARRY,MOVE];
     let totalExtensions = currRoom.find(FIND_MY_STRUCTURES, { filter: extensions => extensions.structureType === STRUCTURE_EXTENSION }).length * EXTENSION_ENERGY_CAPACITY[currRoom.controller.level];
-    let numParts = [Math.ceil(totalExtensions * 0.26/100), Math.ceil(totalExtensions * 0.52/100), Math.ceil(totalExtensions * 0.8/100)];
+    let numParts = [Math.ceil(totalExtensions * 0.3/100), Math.ceil(totalExtensions * 0.52/100), Math.ceil(totalExtensions * 0.8/100)];
     let body = [];
     for (let i = 0; i < bodyParts.length; i++) {
         for (let j = 0; j < numParts[i]; j++) {
@@ -131,7 +131,7 @@ function getDroppedItems(currRoom) {
 }
 
 function getJobsNeeded(currRoom) {
-    let jobArr = [0, 0, 0, 0]; // [Harvesters, Storager, Builders, Maintenance, Upgraders]
+    let jobArr = [0, 0, 0, 0, 0]; // [Harvesters, Storager, Builders, Maintenance, Upgraders]
     jobArr[0] = numHarvesters;
     jobArr[1] = numStoragers;
     jobArr[2] = getConstructionProjects(currRoom).length > 0 ? numBuilders : 0;
@@ -145,7 +145,9 @@ function spawnUtilityCreeps(currRoom) {
     let cBody = makeUtilityCreepBody(currRoom);
     let cMemory = creepMemory;
     let currSpawn = currRoom.find(FIND_MY_SPAWNS)[0];
-    currSpawn.spawnCreep(cBody,cName,{memory:cMemory});
+    if (currSpawn !== undefined) {
+        currSpawn.spawnCreep(cBody,cName,{memory:cMemory});
+    }
 }
 
 function spawnCleanupCreeps(currRoom) {
@@ -153,7 +155,9 @@ function spawnCleanupCreeps(currRoom) {
     let cBody = makeCleanerCreepBody(currRoom);
     let cMemory = cleanerCreepMemory;
     let currSpawn = currRoom.find(FIND_MY_SPAWNS)[0];
-    currSpawn.spawnCreep(cBody,cName,{memory:cMemory});
+    if (currSpawn !== undefined) {
+        currSpawn.spawnCreep(cBody,cName,{memory:cMemory});
+    }
 }
 
 function delegateJobs(currRoom) {
@@ -264,7 +268,7 @@ function buildCon(currCreep) {
             currCreep.moveTo(currStorage);
         }
     } else {
-        currConProj = currCreep.pos.findClosestByRange(conProjects)
+        currConProj = currCreep.pos.findClosestByRange(conProjects);
         if (currCreep.build(currConProj) === ERR_NOT_IN_RANGE) {
             currCreep.moveTo(currConProj);
         }

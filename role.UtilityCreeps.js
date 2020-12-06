@@ -18,6 +18,9 @@ const numUpgraders = 2;
 function makeUtilityCreepBody(currRoom) { // 0.4/100 for Work 0.66/100 for Carry 0.53/100 for Move provides movement of 1 tile per tick on roads
     let bodyParts = [WORK,CARRY,MOVE];
     let totalExtensions = currRoom.find(FIND_MY_STRUCTURES, { filter: extensions => extensions.structureType === STRUCTURE_EXTENSION }).length * EXTENSION_ENERGY_CAPACITY[currRoom.controller.level];
+    if (totalExtensions > 1700) {
+        totalExtensions = 1700;
+    }
     let numParts = [Math.ceil(totalExtensions * 0.4/100), Math.ceil(totalExtensions * 0.66/100), Math.ceil(totalExtensions * 0.53/100)];
     let body = [];
     for (let i = 0; i < bodyParts.length; i++) {
@@ -472,8 +475,13 @@ function storager(currCreep) {
 
 function linkTransfers(currRoom) {
     let links = getLinks(currRoom);
-    if (links.length !== 0 && links[1].cooldown === 0) {
-        links[1].transferEnergy(links[0]);
+    if (links.length !== 0) {
+        if (links[1].cooldown === 0) {
+            links[1].transferEnergy(links[0]);
+        }
+        if (links[2].cooldown === 0) {
+            links[2].transferEnergy(links[0]);
+        }
     }
 }
 

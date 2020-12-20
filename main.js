@@ -21,20 +21,24 @@ function cleanMemory() {
 }
 
 function genPixel() {
-    if (Game.cpu.bucket > PIXEL_CPU_COST) {
+    if (Game.cpu.bucket >= PIXEL_CPU_COST) {
         Game.cpu.generatePixel();
         let time = Date.now() - last;
         last = Date.now();
         console.log("Took", Math.floor(time/1000), "s to generate a pixel!");
+        return false;
+    } else {
+        return true;
     }
 }
 
 module.exports.loop = function () {
-    for (name in Game.rooms) {
-        let currRoom = Game.rooms[name];
-        utilityCreepManager.run(currRoom);
-        towerManager.run(currRoom);
+    if (genPixel()){
+        for (name in Game.rooms) {
+            let currRoom = Game.rooms[name];
+            utilityCreepManager.run(currRoom);
+            towerManager.run(currRoom);
+        }
+       cleanMemory();
     }
-    cleanMemory();
-    genPixel();
 }
